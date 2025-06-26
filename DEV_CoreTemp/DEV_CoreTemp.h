@@ -2,26 +2,53 @@
 #include "HomeSpan.h"
 #include "driver/temperature_sensor.h"
 
-#define TEMP_LOOP_TIME 1200000 // ESP32C3内核温度传感器20分钟（1200000）更新一次状态
+#define TEMP_LOOP_TIME 1200000 // 20分钟更新一次（单位：毫秒）
 
-temperature_sensor_handle_t temp_sensor_handle = NULL;
-float tsens_value = 0;
 
 class CoreTemp
 {
+private:
+    temperature_sensor_handle_t handle = NULL;
+
 public:
-    void begin()
+    bool begin()
     {
-        temperature_sensor_config_t temp_sensor_config = {
+        temperature_sensor_config_t config = {
             .range_min = -10,
             .range_max = 80,
         };
-        esp_err_t err = temperature_sensor_install(&temp_sensor_config, &temp_sensor_handle);
-        err = temperature_sensor_enable(temp_sensor_handle);
+
+        esp_err_t err = temperature_sensor_install(&config, &handle);
+        if (err != ESP_OK)
+        {
+            return false;
+        }
+
+        err = temperature_sensor_enable(handle);
+        if (err != ESP_OK)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    bool read(float &outTemp)
+    {
+        if (!handle)
+        {
+            return false;
+        }
+
+        esp_err_t err = temperature_sensor_get_celsius(handle, &outTemp);
+        if (err != ESP_OK)
+        {
+            return false;
+        }
+        return true;
     }
 };
 
-CoreTemp coreTemp;
+CoreTemp coreTemp; // 创建全局对象
 
 struct DEV_CoreTemp : Service::TemperatureSensor
 {
@@ -30,20 +57,31 @@ struct DEV_CoreTemp : Service::TemperatureSensor
 
     DEV_CoreTemp() : Service::TemperatureSensor()
     {
-        temperature_sensor_get_celsius(temp_sensor_handle, &tsens_value);
-        temp = new Characteristic::CurrentTemperature(tsens_value, true);
-        statusActive = new Characteristic::StatusActive(1, true); // 1表示在运行，0表示未在运行
-        temp->setRange(-10, 80);
+        temp = new Characteristic::CurrentTemperature(0.0, true);
+        statusActive = new Characteristic::StatusActive(1, true); // 初始为“在线”
+        temp->setRange(-10.0, 80.0);
+
+        if (!coreTemp.begin())
+        {
+            statusActive->setVal(false);
+        }
     }
 
     void loop() override
     {
-
         if (temp->timeVal() > TEMP_LOOP_TIME)
         {
-            // esp_err_t err = temperature_sensor_get_celsius(temp_sensor_handle, &tsens_value);
-            temperature_sensor_get_celsius(temp_sensor_handle, &tsens_value);
-            temp->setVal(tsens_value);
+            float value = 0.0;
+            if (coreTemp.read(value))
+            {
+                temp->setVal(value);
+                statusActive->setVal(true);
+            }
+            else
+            {
+                temp->setVal(0.0);
+                statusActive->setVal(false);
+            }
         }
     }
 };
