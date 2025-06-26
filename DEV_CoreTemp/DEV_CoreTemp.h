@@ -4,7 +4,6 @@
 
 #define TEMP_LOOP_TIME 1200000 // 20分钟更新一次（单位：毫秒）
 
-
 class CoreTemp
 {
 private:
@@ -44,8 +43,10 @@ public:
         {
             return false;
         }
+
         return true;
     }
+
 };
 
 CoreTemp coreTemp; // 创建全局对象
