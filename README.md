@@ -18,3 +18,10 @@
 * 
 * 控制反转状态指示灯库 DEV_invertedLED.h 已优化。
 
+```C++
+#include "DEV_invertedLED.h"
+  ...
+  homeSpan.setStatusDevice(new DEV_invertedLED(#));  //把 # 替换成对应引脚号
+  ...
+```
+
