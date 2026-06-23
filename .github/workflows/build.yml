@@ -1,8 +1,11 @@
-name: Build Firmware
+name: Build & Release Firmware
 
 on:
   push:
   workflow_dispatch:
+
+permissions:
+  contents: write   # 👈 必须，否则不能 push tag / release
 
 jobs:
   build:
@@ -13,9 +16,13 @@ jobs:
         env: [esp32, esp32s3, esp32c3]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 👈 必须，否则不能打 tag
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -24,19 +31,58 @@ jobs:
           pip install -U platformio
           pio platform install espressif32
 
-      - name: Build
+      - name: Build firmware
         run: pio run -e ${{ matrix.env }}
 
-      - name: Collect BIN files
+      - name: Collect BIN
         run: |
           mkdir -p bin
           cp .pio/build/${{ matrix.env }}/firmware.bin \
              bin/firmware-${{ matrix.env }}.bin
 
-      # 👉 关键：上传到 Release
-      - name: Upload to Release
+      - name: Upload artifact (debug optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.env }}
+          path: bin/*.bin
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bin
+
+      # =========================
+      # 🔥 自动生成 tag（关键）
+      # =========================
+      - name: Create tag
+        run: |
+          TAG="build-$(date +'%Y%m%d-%H%M%S')"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git tag $TAG
+          git push origin $TAG
+
+      # =========================
+      # 🔥 发布 Release
+      # =========================
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: bin/*.bin
+          tag_name: ${{ env.TAG }}
+          name: Firmware ${{ env.TAG }}
+          files: bin/**/*.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
