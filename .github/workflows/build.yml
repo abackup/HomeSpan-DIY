@@ -30,10 +30,13 @@ jobs:
       - name: Collect BIN files
         run: |
           mkdir -p bin
-          cp .pio/build/${{ matrix.env }}/firmware.bin bin/firmware-${{ matrix.env }}.bin
+          cp .pio/build/${{ matrix.env }}/firmware.bin \
+             bin/firmware-${{ matrix.env }}.bin
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      # 👉 关键：上传到 Release
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: firmware-${{ matrix.env }}
-          path: bin/*.bin
+          files: bin/*.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
