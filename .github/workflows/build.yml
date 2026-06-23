@@ -1,11 +1,11 @@
-name: Build & Release Firmware
+name: Fast Build Firmware
 
 on:
   push:
   workflow_dispatch:
 
 permissions:
-  contents: write   # 👈 必须，否则不能 push tag / release
+  contents: write
 
 jobs:
   build:
@@ -16,31 +16,63 @@ jobs:
         env: [esp32, esp32s3, esp32c3]
 
     steps:
+      # =========================
+      # 1. 拉代码
+      # =========================
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # 👈 必须，否则不能打 tag
+          fetch-depth: 0
 
+      # =========================
+      # 2. Python
+      # =========================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install PlatformIO
-        run: |
-          pip install -U platformio
-          pio platform install espressif32
+      # =========================
+      # 3. ⭐ PlatformIO 缓存（核心加速）
+      # =========================
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio
+          key: ${{ runner.os }}-pio-${{ matrix.env }}-${{ hashFiles('**/platformio.ini') }}
 
+      # =========================
+      # 4. 安装 PlatformIO（只装，不装 platform）
+      # =========================
+      - name: Install PlatformIO
+        run: pip install -U platformio
+
+      # =========================
+      # 5. 编译
+      # =========================
       - name: Build firmware
         run: pio run -e ${{ matrix.env }}
 
-      - name: Collect BIN
+      # =========================
+      # 6. 生成时间戳 + 收集 bin
+      # =========================
+      - name: Collect firmware
         run: |
           mkdir -p bin
-          cp .pio/build/${{ matrix.env }}/firmware.bin \
-             bin/firmware-${{ matrix.env }}.bin
 
-      - name: Upload artifact (debug optional)
+          TIME=$(TZ=Asia/Shanghai date +"%Y%m%d-%H%M%S")
+
+          cp .pio/build/${{ matrix.env }}/firmware.bin \
+             bin/firmware-${{ matrix.env }}-${TIME}.bin
+
+          echo "TIME=$TIME" >> $GITHUB_ENV
+
+      # =========================
+      # 7. 上传 artifact（调试用）
+      # =========================
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.env }}
@@ -53,21 +85,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: bin
 
       # =========================
-      # 🔥 自动生成 tag（关键）
+      # 8. 自动 Tag（加速版优化点）
       # =========================
       - name: Create tag
         run: |
           TAG="build-$(date +'%Y%m%d-%H%M%S')"
-          echo "TAG=$TAG" >> $GITHUB_ENV
 
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -75,8 +104,10 @@ jobs:
           git tag $TAG
           git push origin $TAG
 
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
       # =========================
-      # 🔥 发布 Release
+      # 9. Release 发布
       # =========================
       - name: Create Release
         uses: softprops/action-gh-release@v2
