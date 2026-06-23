@@ -74,7 +74,7 @@ jobs:
       # =========================
       - name: Create tag
         run: |
-          TAG="build-$(date +'%Y%m%d-%H%M%S')"
+          TAG="build-${TIME}"
 
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
