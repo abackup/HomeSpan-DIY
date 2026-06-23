@@ -13,42 +13,26 @@ jobs:
         env: [esp32, esp32s3, esp32c3]
 
     steps:
-      # 1. 拉代码
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Python环境
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. 安装 PlatformIO
       - name: Install PlatformIO
         run: |
           pip install -U platformio
           pio platform install espressif32
 
-      # 4. 编译
-      - name: Build firmware
-        run: |
-          pio run -e ${{ matrix.env }}
+      - name: Build
+        run: pio run -e ${{ matrix.env }}
 
-      # 5. 生成时间戳（关键）
-      - name: Set timestamp
-        run: |
-          echo "TIME=$(TZ=Asia/Shanghai date +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
-
-      # 6. 收集 bin 并改名
-      - name: Collect firmware
+      - name: Collect BIN files
         run: |
           mkdir -p bin
+          cp .pio/build/${{ matrix.env }}/firmware.bin bin/firmware-${{ matrix.env }}.bin
 
-          mv .pio/build/${{ matrix.env }}/firmware.bin \
-             bin/firmware-${{ matrix.env }}-${TIME}.bin
-
-      # 7. 上传产物
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.env }}
