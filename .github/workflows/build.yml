@@ -2,7 +2,6 @@ name: Build Firmware
 
 on:
   push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -11,10 +10,7 @@ jobs:
 
     strategy:
       matrix:
-        env:
- #         - esp32
- #         - esp32s3
-          - esp32c3
+        env: [esp32, esp32s3, esp32c3]
 
     steps:
       - uses: actions/checkout@v4
@@ -24,14 +20,15 @@ jobs:
           python-version: "3.11"
 
       - name: Install PlatformIO
-        run: pip install platformio
+        run: |
+          pip install -U platformio
+          pio platform install espressif32
 
       - name: Build
         run: pio run -e ${{ matrix.env }}
 
-      - name: Upload Firmware
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.env }}
-          path: |
-            .pio/build/${{ matrix.env }}/*.bin
+          path: .pio/build/${{ matrix.env }}/*.bin
