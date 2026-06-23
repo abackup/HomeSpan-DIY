@@ -1,0 +1,41 @@
+name: Build Firmware
+
+on:
+push:
+pull_request:
+workflow_dispatch:
+
+jobs:
+build:
+
+```
+runs-on: ubuntu-latest
+
+strategy:
+  matrix:
+    env:
+      - esp32
+      - esp32s3
+      - esp32c3
+
+steps:
+
+  - uses: actions/checkout@v4
+
+  - uses: actions/setup-python@v5
+    with:
+      python-version: "3.11"
+
+  - name: Install PlatformIO
+    run: pip install platformio
+
+  - name: Build
+    run: pio run -e ${{ matrix.env }}
+
+  - name: Upload Firmware
+    uses: actions/upload-artifact@v4
+    with:
+      name: firmware-${{ matrix.env }}
+      path: |
+        .pio/build/${{ matrix.env }}/*.bin
+```
