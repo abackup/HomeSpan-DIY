@@ -1,7 +1,6 @@
 name: Fast Build Firmware
 
 on:
-  push:
   workflow_dispatch:
 
 permissions:
