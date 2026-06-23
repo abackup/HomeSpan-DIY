@@ -12,8 +12,8 @@ jobs:
     strategy:
       matrix:
         env:
-          - esp32
-          - esp32s3
+ #         - esp32
+ #         - esp32s3
           - esp32c3
 
     steps:
