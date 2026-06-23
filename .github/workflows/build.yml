@@ -70,28 +70,6 @@ jobs:
           echo "TIME=$TIME" >> $GITHUB_ENV
 
       # =========================
-      # 7. 上传 artifact（调试用）
-      # =========================
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware-${{ matrix.env }}
-          path: bin/*.bin
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: bin
-
-      # =========================
       # 8. 自动 Tag（加速版优化点）
       # =========================
       - name: Create tag
