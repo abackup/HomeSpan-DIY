@@ -1,0 +1,6 @@
+unused_nvs,data,nvs,,20K,
+otadata,data,ota,,8K,
+app0,app,ota_0,,3968K,
+app1,app,ota_1,,3968K,
+nvs,data,nvs,,128K,
+coredump,data,coredump,,64K,
