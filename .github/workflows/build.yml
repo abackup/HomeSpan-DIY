@@ -13,8 +13,8 @@ jobs:
 
     strategy:
       matrix:
-        env: [esp32, esp32s3, esp32c3]
-
+#        env: [esp32, esp32s3, esp32c3]
+        env: [esp32s3]
     steps:
       # =========================
       # 1. 拉代码
